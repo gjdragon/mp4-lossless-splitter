@@ -28,7 +28,7 @@ python -m venv .venv
 
 ```bash
 python.exe -m pip install --upgrade pip
-pip install xxx
+pip install PyQt6
 ```
 
 ### **3. Run the application**

@@ -2,6 +2,18 @@
 
 All notable changes to MP4 Lossless Splitter are documented in this file.
 
+---
+
+## [0.2.0] - 2025-12-27
+
+### Added
+- **Quick Cut Options**
+  - Cut first X seconds
+  - Cut last X seconds
+  - Split by duration
+
+---
+
 ## [0.1.0] - 2025-12-27
 
 ### Added
@@ -36,4 +48,3 @@ All notable changes to MP4 Lossless Splitter are documented in this file.
 - Built with PyQt6 for cross-platform compatibility
 - Uses FFmpeg for reliable video processing
 - Multi-threaded video worker for non-blocking UI
-- Supports Windows, macOS, and Linux

@@ -199,6 +199,62 @@ class VideoSplitterApp(QMainWindow):
         # Right panel - Cuts and segments
         right_panel = QVBoxLayout()
 
+        # Quick cut options
+        quick_cuts_label = QLabel("Quick Cut Options:")
+        quick_cuts_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        right_panel.addWidget(quick_cuts_label)
+
+        quick_cuts_layout = QVBoxLayout()
+
+        # Cut first X seconds
+        first_sec_layout = QHBoxLayout()
+        first_sec_layout.addWidget(QLabel("First"))
+        self.first_sec_spin = QSpinBox()
+        self.first_sec_spin.setMinimum(0)
+        self.first_sec_spin.setMaximum(3600)
+        self.first_sec_spin.setValue(0)
+        first_sec_layout.addWidget(self.first_sec_spin)
+        first_sec_layout.addWidget(QLabel("seconds"))
+        first_btn = QPushButton("✂ Cut First")
+        first_btn.clicked.connect(self.cut_first_seconds)
+        first_sec_layout.addWidget(first_btn)
+        quick_cuts_layout.addLayout(first_sec_layout)
+
+        # Cut last X seconds
+        last_sec_layout = QHBoxLayout()
+        last_sec_layout.addWidget(QLabel("Last"))
+        self.last_sec_spin = QSpinBox()
+        self.last_sec_spin.setMinimum(0)
+        self.last_sec_spin.setMaximum(3600)
+        self.last_sec_spin.setValue(0)
+        last_sec_layout.addWidget(self.last_sec_spin)
+        last_sec_layout.addWidget(QLabel("seconds"))
+        last_btn = QPushButton("✂ Cut Last")
+        last_btn.clicked.connect(self.cut_last_seconds)
+        last_sec_layout.addWidget(last_btn)
+        quick_cuts_layout.addLayout(last_sec_layout)
+
+        # Split by duration
+        duration_layout = QHBoxLayout()
+        duration_layout.addWidget(QLabel("Split every"))
+        self.split_duration_spin = QSpinBox()
+        self.split_duration_spin.setMinimum(1)
+        self.split_duration_spin.setMaximum(3600)
+        self.split_duration_spin.setValue(60)
+        duration_layout.addWidget(self.split_duration_spin)
+        duration_layout.addWidget(QLabel("seconds"))
+        split_btn = QPushButton("📊 Split by Duration")
+        split_btn.clicked.connect(self.split_by_duration)
+        duration_layout.addWidget(split_btn)
+        quick_cuts_layout.addLayout(duration_layout)
+
+        right_panel.addLayout(quick_cuts_layout)
+
+        # Separator
+        separator = QLabel("─" * 50)
+        separator.setStyleSheet("color: #475569;")
+        right_panel.addWidget(separator)
+
         # Cuts section
         cuts_label = QLabel("Cut Points:")
         cuts_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
@@ -340,6 +396,58 @@ class VideoSplitterApp(QMainWindow):
         if row >= 0:
             self.cuts.pop(row)
             self.refresh_cuts_list()
+
+    def remove_cut(self, item):
+        self.remove_selected_cut()
+
+    def cut_first_seconds(self):
+        """Skip the first X seconds of the video"""
+        seconds = self.first_sec_spin.value()
+        if seconds > 0 and seconds < self.duration / 1000:
+            if seconds not in self.cuts:
+                self.cuts.append(seconds)
+                self.cuts.sort()
+                self.refresh_cuts_list()
+                QMessageBox.information(self, "Success", 
+                    f"Cut point added at {self.format_time(seconds)}.\nFirst {seconds}s will be removed.")
+        else:
+            QMessageBox.warning(self, "Invalid", "Please enter a valid duration.")
+
+    def cut_last_seconds(self):
+        """Remove the last X seconds of the video"""
+        seconds = self.last_sec_spin.value()
+        total_duration = self.duration / 1000
+        if seconds > 0 and seconds < total_duration:
+            cut_point = total_duration - seconds
+            if cut_point not in self.cuts:
+                self.cuts.append(cut_point)
+                self.cuts.sort()
+                self.refresh_cuts_list()
+                QMessageBox.information(self, "Success", 
+                    f"Cut point added at {self.format_time(cut_point)}.\nLast {seconds}s will be removed.")
+        else:
+            QMessageBox.warning(self, "Invalid", "Please enter a valid duration.")
+
+    def split_by_duration(self):
+        """Split video into equal duration segments"""
+        segment_duration = self.split_duration_spin.value()
+        total_duration = self.duration / 1000
+        
+        if segment_duration <= 0 or segment_duration >= total_duration:
+            QMessageBox.warning(self, "Invalid", "Please enter a valid segment duration.")
+            return
+        
+        self.cuts = []
+        current_time = segment_duration
+        
+        while current_time < total_duration:
+            self.cuts.append(current_time)
+            current_time += segment_duration
+        
+        self.refresh_cuts_list()
+        num_segments = len(self.cuts) + 1
+        QMessageBox.information(self, "Success", 
+            f"Video will be split into {num_segments} segments of ~{segment_duration}s each.")
 
     def remove_cut(self, item):
         self.remove_selected_cut()
