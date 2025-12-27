@@ -1,5 +1,5 @@
 """
-MP4 Quick Splitter - Desktop Application
+MP4 Lossless Splitter - Desktop Application
 A local application for fast video splitting without re-encoding
 
 Requirements:
@@ -58,7 +58,7 @@ class VideoWorker(QThread):
 class VideoSplitterApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MP4 Quick Splitter")
+        self.setWindowTitle("MP4 Lossless Splitter v1.0.0")
         self.setGeometry(100, 100, 1200, 800)
         self.setStyleSheet(self.get_dark_stylesheet())
 
@@ -386,7 +386,7 @@ class VideoSplitterApp(QMainWindow):
             self.segments = []
             self.cuts_list.clear()
             self.segments_list.clear()
-            self.setWindowTitle(f"MP4 Quick Splitter - {Path(file_path).name}")
+            self.setWindowTitle(f"MP4 Lossless Splitter - {Path(file_path).name}")
             self.setEnabled(True)
             self.split_btn.setEnabled(False)
 
@@ -707,7 +707,7 @@ class VideoSplitterApp(QMainWindow):
                 self.segments_list.clear()
                 self.refresh_cuts_list()
 
-                self.setWindowTitle(f"MP4 Quick Splitter - {Path(video_path).name}")
+                self.setWindowTitle(f"MP4 Lossless Splitter - {Path(video_path).name}")
                 self.setEnabled(True)
                 self.split_btn.setEnabled(False)
 
