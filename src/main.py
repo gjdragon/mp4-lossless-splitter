@@ -131,10 +131,20 @@ class VideoSplitterApp(QMainWindow):
         # Left panel - Video player
         left_panel = QVBoxLayout()
 
-        # File selection
+        # File and project management
+        file_project_layout = QHBoxLayout()
         file_btn = QPushButton("🔓 Open MP4 File")
         file_btn.clicked.connect(self.open_file)
-        left_panel.addWidget(file_btn)
+        file_project_layout.addWidget(file_btn)
+
+        save_project_btn = QPushButton("💾 Save Project")
+        save_project_btn.clicked.connect(self.save_project)
+        file_project_layout.addWidget(save_project_btn)
+
+        open_project_btn = QPushButton("📂 Open Project")
+        open_project_btn.clicked.connect(self.open_project)
+        file_project_layout.addWidget(open_project_btn)
+        left_panel.addLayout(file_project_layout)
 
         # Video widget
         self.video_widget = QVideoWidget()
@@ -350,6 +360,18 @@ class VideoSplitterApp(QMainWindow):
 
         central_widget.setLayout(main_layout)
 
+        # Set minimum width for right panel to be 400px
+        right_widget = QWidget()
+        right_widget.setLayout(right_panel)
+        right_widget.setMinimumWidth(400)
+        right_widget.setMaximumWidth(400)
+
+        # Recreate main layout with the right widget
+        main_layout = QHBoxLayout()
+        main_layout.addLayout(left_panel, 1)
+        main_layout.addWidget(right_widget, 0)
+        central_widget.setLayout(main_layout)
+
         # Player signals
         self.player.positionChanged.connect(self.update_timeline)
         self.player.durationChanged.connect(self.update_duration)
@@ -366,6 +388,7 @@ class VideoSplitterApp(QMainWindow):
             self.video_filename = Path(file_path).stem
             self.player.setSource(QUrl.fromLocalFile(file_path))
             self.cuts = []
+            self.cut_status = {}
             self.segments = []
             self.cuts_list.clear()
             self.segments_list.clear()
@@ -624,6 +647,81 @@ class VideoSplitterApp(QMainWindow):
             QMessageBox.information(self, "Success", message)
         else:
             QMessageBox.critical(self, "Error", message)
+
+    def save_project(self):
+        if not self.video_file:
+            QMessageBox.warning(self, "Error", "Please open a video file first.")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Project", "",
+            "MP4 Splitter Project (*.mp4proj);;All Files (*)"
+        )
+
+        if file_path:
+            project_data = {
+                "video_file": self.video_file,
+                "video_filename": self.video_filename,
+                "cuts": self.cuts,
+                "cut_status": {str(k): v for k, v in self.cut_status.items()}
+            }
+
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump(project_data, f, indent=2)
+                QMessageBox.information(self, "Success", f"Project saved successfully to:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save project:\n{str(e)}")
+
+    def open_project(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open Project", "",
+            "MP4 Splitter Project (*.mp4proj);;All Files (*)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'r') as f:
+                    project_data = json.load(f)
+
+                video_path = project_data.get("video_file")
+                
+                # Check if video file exists
+                if not os.path.exists(video_path):
+                    QMessageBox.warning(self, "Error", 
+                        f"Video file not found:\n{video_path}\n\nPlease move the project file near the video file.")
+                    return
+
+                # Load video
+                self.video_file = video_path
+                self.video_filename = project_data.get("video_filename")
+                self.player.setSource(QUrl.fromLocalFile(video_path))
+
+                # Load cuts and their status
+                self.cuts = project_data.get("cuts", [])
+                self.cuts.sort()
+                
+                self.cut_status = {}
+                for cut_str, status in project_data.get("cut_status", {}).items():
+                    try:
+                        self.cut_status[float(cut_str)] = status
+                    except ValueError:
+                        pass
+
+                self.segments = []
+                self.cuts_list.clear()
+                self.segments_list.clear()
+                self.refresh_cuts_list()
+
+                self.setWindowTitle(f"MP4 Quick Splitter - {Path(video_path).name}")
+                self.setEnabled(True)
+                self.split_btn.setEnabled(False)
+
+                QMessageBox.information(self, "Success", 
+                    f"Project loaded successfully!\nFound {len(self.cuts)} cut points.")
+
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to open project:\n{str(e)}")
 
 
 def main():

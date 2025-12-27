@@ -4,6 +4,13 @@ All notable changes to MP4 Lossless Splitter are documented in this file.
 
 ---
 
+## [0.6.0] - 2025-12-27
+
+### Added
+- **Keep/Dicard** - Add save project and open project buttons.
+
+---
+
 ## [0.5.0] - 2025-12-27
 
 ### Added
