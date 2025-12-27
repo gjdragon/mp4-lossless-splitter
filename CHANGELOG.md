@@ -4,6 +4,12 @@ All notable changes to MP4 Lossless Splitter are documented in this file.
 
 ---
 
+## [1.0.0] - 2025-12-27
+
+### Change
+- Adjust the window size and make video preview bigger.
+---
+
 ## [0.6.0] - 2025-12-27
 
 ### Added

@@ -126,8 +126,6 @@ class VideoSplitterApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        main_layout = QHBoxLayout()
-
         # Left panel - Video player
         left_panel = QVBoxLayout()
 
@@ -354,22 +352,18 @@ class VideoSplitterApp(QMainWindow):
         self.split_btn.setEnabled(False)
         right_panel.addWidget(self.split_btn)
 
-        # Add panels to main layout
-        main_layout.addLayout(left_panel, 2)
-        main_layout.addLayout(right_panel, 1)
-
-        central_widget.setLayout(main_layout)
-
         # Set minimum width for right panel to be 400px
         right_widget = QWidget()
         right_widget.setLayout(right_panel)
         right_widget.setMinimumWidth(400)
         right_widget.setMaximumWidth(400)
 
-        # Recreate main layout with the right widget
+        # Create main layout and add panels
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_panel, 1)
         main_layout.addWidget(right_widget, 0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
         central_widget.setLayout(main_layout)
 
         # Player signals
