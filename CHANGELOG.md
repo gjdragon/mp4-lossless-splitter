@@ -2,6 +2,12 @@
 
 All notable changes to MP4 Lossless Splitter are documented in this file.
 
+---
+
+## [0.5.0] - 2025-12-27
+
+### Added
+- **Keep/Dicard** - Display keep and discard info on the fly before generating segments.
 
 ---
 

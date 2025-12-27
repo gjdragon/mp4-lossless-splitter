@@ -420,19 +420,32 @@ class VideoSplitterApp(QMainWindow):
         if current not in self.cuts:
             self.cuts.append(current)
             self.cuts.sort()
+            if not hasattr(self, 'cut_status'):
+                self.cut_status = {}
+            self.cut_status[current] = "keep"
             self.refresh_cuts_list()
-            QMessageBox.information(self, "Cut Point Added", 
-                f"Cut point added at {self.format_time(current)}.\nYou can now mark it as discard if needed.")
 
     def refresh_cuts_list(self):
         self.cuts_list.clear()
-        for cut in self.cuts:
-            self.cuts_list.addItem(self.format_time(cut))
+        if not hasattr(self, 'cut_status'):
+            self.cut_status = {}
+        
+        for i, cut in enumerate(self.cuts):
+            status = self.cut_status.get(cut, "keep")
+            status_icon = "✓" if status == "keep" else "✗"
+            status_text = "KEEP" if status == "keep" else "DISCARD"
+            item_text = f"{status_icon} {self.format_time(cut)} [{status_text}]"
+            self.cuts_list.addItem(item_text)
 
     def remove_selected_cut(self):
         row = self.cuts_list.currentRow()
         if row >= 0:
+            cut_time = self.cuts[row]
             self.cuts.pop(row)
+            if not hasattr(self, 'cut_status'):
+                self.cut_status = {}
+            if cut_time in self.cut_status:
+                del self.cut_status[cut_time]
             self.refresh_cuts_list()
 
     def remove_cut(self, item):
@@ -445,23 +458,17 @@ class VideoSplitterApp(QMainWindow):
             return
         
         # Get the last added cut point
-        last_cut_idx = len(self.cuts) - 1
+        last_cut = self.cuts[-1]
         
-        # Find which segment this cut point will create
-        # If we have cuts [10, 20, 30], they create segments:
-        # [0-10], [10-20], [20-30], [30-end]
-        # So cut point at index i creates segment i+1
+        if not hasattr(self, 'cut_status'):
+            self.cut_status = {}
         
-        if not hasattr(self, 'pending_discard_segments'):
-            self.pending_discard_segments = set()
+        # Toggle between keep and discard
+        current_status = self.cut_status.get(last_cut, "keep")
+        new_status = "discard" if current_status == "keep" else "keep"
+        self.cut_status[last_cut] = new_status
         
-        # Mark the segment that will be created after this cut point
-        segment_to_discard = last_cut_idx + 1
-        self.pending_discard_segments.add(segment_to_discard)
-        
-        cut_time = self.cuts[last_cut_idx]
-        QMessageBox.information(self, "Marked for Discard",
-            f"The segment after cut point {self.format_time(cut_time)} will be marked as discard.")
+        self.refresh_cuts_list()
 
     def cut_first_seconds(self):
         """Skip the first X seconds of the video"""
@@ -521,8 +528,9 @@ class VideoSplitterApp(QMainWindow):
         self.segments = []
 
         for i in range(len(sorted_cuts) - 1):
-            # Check if this segment was marked for discard
-            status = "discard" if i in getattr(self, 'pending_discard_segments', set()) else "keep"
+            # Check if the cut point that creates this segment was marked for discard
+            cut_after_segment = self.cuts[i] if i < len(self.cuts) else None
+            status = "discard" if cut_after_segment and self.cut_status.get(cut_after_segment) == "discard" else "keep"
             
             self.segments.append({
                 "id": i,
