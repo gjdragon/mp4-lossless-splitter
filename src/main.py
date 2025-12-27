@@ -63,6 +63,7 @@ class VideoSplitterApp(QMainWindow):
         self.setStyleSheet(self.get_dark_stylesheet())
 
         self.video_file = None
+        self.video_filename = None
         self.duration = 0
         self.cuts = []
         self.segments = []
@@ -131,7 +132,7 @@ class VideoSplitterApp(QMainWindow):
         left_panel = QVBoxLayout()
 
         # File selection
-        file_btn = QPushButton("📁 Open MP4 File")
+        file_btn = QPushButton("🔓 Open MP4 File")
         file_btn.clicked.connect(self.open_file)
         left_panel.addWidget(file_btn)
 
@@ -178,7 +179,7 @@ class VideoSplitterApp(QMainWindow):
         self.play_btn.clicked.connect(self.play_video)
         controls.addWidget(self.play_btn)
 
-        self.pause_btn = QPushButton("⏸ Pause")
+        self.pause_btn = QPushButton("⸸ Pause")
         self.pause_btn.clicked.connect(self.pause_video)
         controls.addWidget(self.pause_btn)
 
@@ -243,7 +244,7 @@ class VideoSplitterApp(QMainWindow):
         self.split_duration_spin.setValue(60)
         duration_layout.addWidget(self.split_duration_spin)
         duration_layout.addWidget(QLabel("seconds"))
-        split_btn = QPushButton("📊 Split by Duration")
+        split_btn = QPushButton("🔊 Split by Duration")
         split_btn.clicked.connect(self.split_by_duration)
         duration_layout.addWidget(split_btn)
         quick_cuts_layout.addLayout(duration_layout)
@@ -251,7 +252,7 @@ class VideoSplitterApp(QMainWindow):
         right_panel.addLayout(quick_cuts_layout)
 
         # Separator
-        separator = QLabel("─" * 50)
+        separator = QLabel("━" * 50)
         separator.setStyleSheet("color: #475569;")
         right_panel.addWidget(separator)
 
@@ -269,7 +270,7 @@ class VideoSplitterApp(QMainWindow):
         right_panel.addWidget(remove_cut_btn)
 
         # Generate segments
-        generate_btn = QPushButton("📊 Generate Segments")
+        generate_btn = QPushButton("🔊 Generate Segments")
         generate_btn.clicked.connect(self.generate_segments)
         generate_btn.setStyleSheet("""
             QPushButton {
@@ -287,18 +288,49 @@ class VideoSplitterApp(QMainWindow):
         right_panel.addWidget(segments_label)
 
         self.segments_list = QListWidget()
+        self.segments_list.itemClicked.connect(self.on_segment_clicked)
         self.segments_list.itemDoubleClicked.connect(self.edit_segment_name)
         right_panel.addWidget(self.segments_list, 1)
+
+        # Segment control buttons
+        segment_controls = QHBoxLayout()
+        self.keep_btn = QPushButton("✓ Mark as Keep")
+        self.keep_btn.clicked.connect(self.mark_segment_keep)
+        self.keep_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #10b981;
+            }
+            QPushButton:hover {
+                background-color: #34d399;
+            }
+        """)
+        self.keep_btn.setEnabled(False)
+        segment_controls.addWidget(self.keep_btn)
+
+        self.discard_btn = QPushButton("✗ Mark as Discard")
+        self.discard_btn.clicked.connect(self.mark_segment_discard)
+        self.discard_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ef4444;
+            }
+            QPushButton:hover {
+                background-color: #f87171;
+            }
+        """)
+        self.discard_btn.setEnabled(False)
+        segment_controls.addWidget(self.discard_btn)
+
+        right_panel.addLayout(segment_controls)
 
         # Split button
         self.split_btn = QPushButton("🚀 Start Splitting")
         self.split_btn.clicked.connect(self.start_splitting)
         self.split_btn.setStyleSheet("""
             QPushButton {
-                background-color: #10b981;
+                background-color: #8b5cf6;
             }
             QPushButton:hover {
-                background-color: #34d399;
+                background-color: #a78bfa;
             }
         """)
         self.split_btn.setEnabled(False)
@@ -323,6 +355,7 @@ class VideoSplitterApp(QMainWindow):
 
         if file_path:
             self.video_file = file_path
+            self.video_filename = Path(file_path).stem
             self.player.setSource(QUrl.fromLocalFile(file_path))
             self.cuts = []
             self.segments = []
@@ -339,7 +372,6 @@ class VideoSplitterApp(QMainWindow):
         self.player.pause()
 
     def set_volume(self, value):
-        # Convert 0-100 to 0.0-1.0
         self.audio_output.setVolume(value / 100.0)
 
     def seek_video(self, position):
@@ -449,9 +481,6 @@ class VideoSplitterApp(QMainWindow):
         QMessageBox.information(self, "Success", 
             f"Video will be split into {num_segments} segments of ~{segment_duration}s each.")
 
-    def remove_cut(self, item):
-        self.remove_selected_cut()
-
     def generate_segments(self):
         if not self.cuts:
             QMessageBox.warning(self, "No Cuts", "Please add at least one cut point.")
@@ -465,7 +494,8 @@ class VideoSplitterApp(QMainWindow):
                 "id": i,
                 "start": sorted_cuts[i],
                 "end": sorted_cuts[i + 1],
-                "name": f"segment_{i + 1}"
+                "name": f"segment_{i + 1}",
+                "status": "keep"
             })
 
         self.refresh_segments_list()
@@ -477,8 +507,28 @@ class VideoSplitterApp(QMainWindow):
             start = self.format_time(seg["start"])
             end = self.format_time(seg["end"])
             duration = self.format_time(seg["end"] - seg["start"])
-            item_text = f"{seg['name']}\n{start} → {end} ({duration})"
+            status_icon = "✓" if seg["status"] == "keep" else "✗"
+            status_text = "KEEP" if seg["status"] == "keep" else "DISCARD"
+            item_text = f"{status_icon} {seg['name']} [{status_text}]\n{start} → {end} ({duration})"
             self.segments_list.addItem(item_text)
+
+    def on_segment_clicked(self, item):
+        self.keep_btn.setEnabled(True)
+        self.discard_btn.setEnabled(True)
+
+    def mark_segment_keep(self):
+        row = self.segments_list.currentRow()
+        if row >= 0:
+            self.segments[row]["status"] = "keep"
+            self.refresh_segments_list()
+            self.segments_list.setCurrentRow(row)
+
+    def mark_segment_discard(self):
+        row = self.segments_list.currentRow()
+        if row >= 0:
+            self.segments[row]["status"] = "discard"
+            self.refresh_segments_list()
+            self.segments_list.setCurrentRow(row)
 
     def edit_segment_name(self, item):
         row = self.segments_list.row(item)
@@ -502,7 +552,14 @@ class VideoSplitterApp(QMainWindow):
 
         ffmpeg_commands = []
         for seg in self.segments:
-            output_path = os.path.join(output_dir, f"{seg['name']}.mp4")
+            # Build filename: original_name_segment_x or original_name_segment_x_discard
+            suffix = ""
+            if seg["status"] == "discard":
+                suffix = "_discard"
+            
+            output_filename = f"{self.video_filename}_{seg['name']}{suffix}.mp4"
+            output_path = os.path.join(output_dir, output_filename)
+            
             cmd = (
                 f'ffmpeg -i "{self.video_file}" '
                 f'-ss {seg["start"]} -to {seg["end"]} '

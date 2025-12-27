@@ -4,6 +4,15 @@ All notable changes to MP4 Lossless Splitter are documented in this file.
 
 ---
 
+## [0.3.0] - 2025-12-27
+
+### Added
+- **Keep/Discard Marking for Segments** - Mark output segments as Keep or Discard before splitting
+- **Visual Status Indicators** - Segments display with status icon and label (✓ KEEP or ✗ DISCARD)
+- **Filename Suffix for Discarded Segments** - Discarded segments automatically append `_discard` to filename
+- **Mark Keep/Discard Buttons** - Green and red buttons to toggle segment status
+---
+
 ## [0.2.0] - 2025-12-27
 
 ### Added
