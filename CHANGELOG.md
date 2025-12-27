@@ -2,6 +2,15 @@
 
 All notable changes to MP4 Lossless Splitter are documented in this file.
 
+
+---
+
+## [0.4.0] - 2025-12-27
+
+### Added
+- **Combined Play/Pause Button** - Single toggle button for play/pause control
+- **Keep/Discard Toggle for Cut Points** - Mark cut points as Keep or Discard during playback without generating segments
+
 ---
 
 ## [0.3.0] - 2025-12-27

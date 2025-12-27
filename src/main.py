@@ -175,13 +175,9 @@ class VideoSplitterApp(QMainWindow):
 
         # Controls
         controls = QHBoxLayout()
-        self.play_btn = QPushButton("▶ Play")
-        self.play_btn.clicked.connect(self.play_video)
-        controls.addWidget(self.play_btn)
-
-        self.pause_btn = QPushButton("⸸ Pause")
-        self.pause_btn.clicked.connect(self.pause_video)
-        controls.addWidget(self.pause_btn)
+        self.play_pause_btn = QPushButton("▶ Play")
+        self.play_pause_btn.clicked.connect(self.toggle_play_pause)
+        controls.addWidget(self.play_pause_btn)
 
         self.cut_btn = QPushButton("✂ Add Cut Point")
         self.cut_btn.clicked.connect(self.add_cut)
@@ -194,6 +190,18 @@ class VideoSplitterApp(QMainWindow):
             }
         """)
         controls.addWidget(self.cut_btn)
+
+        self.mark_discard_btn = QPushButton("✗ Mark as Discard")
+        self.mark_discard_btn.clicked.connect(self.mark_cut_as_discard)
+        self.mark_discard_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ef4444;
+            }
+            QPushButton:hover {
+                background-color: #f87171;
+            }
+        """)
+        controls.addWidget(self.mark_discard_btn)
 
         left_panel.addLayout(controls)
 
@@ -365,11 +373,11 @@ class VideoSplitterApp(QMainWindow):
             self.setEnabled(True)
             self.split_btn.setEnabled(False)
 
-    def play_video(self):
-        self.player.play()
-
-    def pause_video(self):
-        self.player.pause()
+    def toggle_play_pause(self):
+        if self.player.isPlaying():
+            self.player.pause()
+        else:
+            self.player.play()
 
     def set_volume(self, value):
         self.audio_output.setVolume(value / 100.0)
@@ -403,13 +411,9 @@ class VideoSplitterApp(QMainWindow):
 
     def update_play_button(self):
         if self.player.isPlaying():
-            self.play_btn.setText("▶ Playing")
-            self.play_btn.setEnabled(False)
-            self.pause_btn.setEnabled(True)
+            self.play_pause_btn.setText("⸸ Pause")
         else:
-            self.play_btn.setText("▶ Play")
-            self.play_btn.setEnabled(True)
-            self.pause_btn.setEnabled(False)
+            self.play_pause_btn.setText("▶ Play")
 
     def add_cut(self):
         current = self.player.position() / 1000
@@ -417,6 +421,8 @@ class VideoSplitterApp(QMainWindow):
             self.cuts.append(current)
             self.cuts.sort()
             self.refresh_cuts_list()
+            QMessageBox.information(self, "Cut Point Added", 
+                f"Cut point added at {self.format_time(current)}.\nYou can now mark it as discard if needed.")
 
     def refresh_cuts_list(self):
         self.cuts_list.clear()
@@ -431,6 +437,31 @@ class VideoSplitterApp(QMainWindow):
 
     def remove_cut(self, item):
         self.remove_selected_cut()
+
+    def mark_cut_as_discard(self):
+        """Mark the segment that will be created at the current cut point as discard"""
+        if not self.cuts:
+            QMessageBox.warning(self, "No Cuts", "Please add a cut point first.")
+            return
+        
+        # Get the last added cut point
+        last_cut_idx = len(self.cuts) - 1
+        
+        # Find which segment this cut point will create
+        # If we have cuts [10, 20, 30], they create segments:
+        # [0-10], [10-20], [20-30], [30-end]
+        # So cut point at index i creates segment i+1
+        
+        if not hasattr(self, 'pending_discard_segments'):
+            self.pending_discard_segments = set()
+        
+        # Mark the segment that will be created after this cut point
+        segment_to_discard = last_cut_idx + 1
+        self.pending_discard_segments.add(segment_to_discard)
+        
+        cut_time = self.cuts[last_cut_idx]
+        QMessageBox.information(self, "Marked for Discard",
+            f"The segment after cut point {self.format_time(cut_time)} will be marked as discard.")
 
     def cut_first_seconds(self):
         """Skip the first X seconds of the video"""
@@ -490,12 +521,15 @@ class VideoSplitterApp(QMainWindow):
         self.segments = []
 
         for i in range(len(sorted_cuts) - 1):
+            # Check if this segment was marked for discard
+            status = "discard" if i in getattr(self, 'pending_discard_segments', set()) else "keep"
+            
             self.segments.append({
                 "id": i,
                 "start": sorted_cuts[i],
                 "end": sorted_cuts[i + 1],
                 "name": f"segment_{i + 1}",
-                "status": "keep"
+                "status": status
             })
 
         self.refresh_segments_list()
